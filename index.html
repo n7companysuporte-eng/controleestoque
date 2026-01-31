@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Controle de Estoque</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --azul: #0a3cff;
+  --preto: #0f172a;
+  --cinza: #f1f5f9;
+  --branco: #ffffff;
+  --vermelho: #dc2626;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: var(--cinza);
+  color: var(--preto);
+}
+
+header {
+  background: var(--preto);
+  color: var(--branco);
+  padding: 20px;
+}
+
+header h1 {
+  font-size: 22px;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 20px;
+}
+
+.card {
+  background: var(--branco);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.card h2 {
+  font-size: 16px;
+  margin-bottom: 15px;
+  color: var(--preto);
+}
+
+label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0 15px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+button {
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-azul {
+  background: var(--azul);
+  color: var(--branco);
+  width: 100%;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th {
+  text-align: left;
+  padding: 10px;
+  background: var(--cinza);
+  font-size: 13px;
+}
+
+td {
+  padding: 10px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.status-baixo {
+  color: var(--vermelho);
+  font-weight: bold;
+}
+
+.acoes button {
+  background: transparent;
+  font-size: 16px;
+}
+
+.entrada { color: #16a34a; }
+.saida { color: #ca8a04; }
+.remover { color: var(--vermelho); }
+
+.resumo {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>📦 Controle de Estoque</h1>
+</header>
+
+<div class="container">
+
+  <div class="grid">
+
+    <!-- CADASTRO -->
+    <div class="card">
+      <h2>Cadastrar Produto</h2>
+
+      <label>Nome do produto</label>
+      <input id="nome">
+
+      <label>Quantidade inicial</label>
+      <input id="quantidade" type="number">
+
+      <label>Estoque mínimo</label>
+      <input id="minimo" type="number">
+
+      <button class="btn-azul" onclick="adicionar()">Adicionar Produto</button>
+    </div>
+
+    <!-- ESTOQUE -->
+    <div class="card">
+      <div class="resumo">
+        <span id="total"></span>
+        <span id="alertas"></span>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Qtd</th>
+            <th>Mín</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabela"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+let estoque = JSON.parse(localStorage.getItem("estoque")) || [];
+
+function salvar() {
+  localStorage.setItem("estoque", JSON.stringify(estoque));
+  render();
+}
+
+function adicionar() {
+  const nome = nomeInput().value.trim();
+  const qtd = Number(qtdInput().value);
+  const min = Number(minInput().value);
+
+  if (!nome || isNaN(qtd) || isNaN(min)) {
+    alert("Preencha todos os campos");
+    return;
+  }
+
+  estoque.push({ nome, qtd, min });
+  salvar();
+
+  nomeInput().value = "";
+  qtdInput().value = "";
+  minInput().value = "";
+}
+
+function render() {
+  const tabela = document.getElementById("tabela");
+  tabela.innerHTML = "";
+
+  let baixo = 0;
+
+  estoque.forEach((p, i) => {
+    if (p.qtd <= p.min) baixo++;
+
+    tabela.innerHTML += `
+      <tr>
+        <td class="${p.qtd <= p.min ? 'status-baixo' : ''}">${p.nome}</td>
+        <td>${p.qtd}</td>
+        <td>${p.min}</td>
+        <td class="acoes">
+          <button class="entrada" onclick="entrada(${i})">＋</button>
+          <button class="saida" onclick="saida(${i})">－</button>
+          <button class="remover" onclick="remover(${i})">🗑</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("total").innerText = `Produtos: ${estoque.length}`;
+  document.getElementById("alertas").innerText = `Estoque baixo: ${baixo}`;
+}
+
+function entrada(i) { estoque[i].qtd++; salvar(); }
+function saida(i) { if (estoque[i].qtd > 0) estoque[i].qtd--; salvar(); }
+function remover(i) {
+  if (confirm("Remover produto?")) {
+    estoque.splice(i, 1);
+    salvar();
+  }
+}
+
+const nomeInput = () => document.getElementById("nome");
+const qtdInput = () => document.getElementById("quantidade");
+const minInput = () => document.getElementById("minimo");
+
+render();
+</script>
+
+</body>
+</html>
